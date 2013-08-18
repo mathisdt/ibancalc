@@ -1,8 +1,15 @@
 package org.zephyrsoft.ibancalc;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.HashSet;
+import java.util.Set;
+import com.ancientprogramming.fixedformat4j.format.FixedFormatManager;
+import com.ancientprogramming.fixedformat4j.format.impl.FixedFormatManagerImpl;
 import com.csvreader.CsvReader;
 import com.csvreader.CsvWriter;
 import org.apache.commons.validator.routines.checkdigit.CheckDigitException;
@@ -10,6 +17,9 @@ import org.apache.commons.validator.routines.checkdigit.IBANCheckDigit;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.zephyrsoft.ibancalc.model.Bank;
 
 /**
  * IBAN calculation for Germany (assumed IBAN country code is "DE").
@@ -29,6 +39,8 @@ public class Start {
 	@Option(name = "--account", usage = "use this account number", metaVar = "NUMBER")
 	private String accountNumber = null;
 	
+	private Set<Bank> banks;
+	
 	private Start(String[] args) {
 		CmdLineParser parser = new CmdLineParser(this);
 		try {
@@ -45,6 +57,8 @@ public class Start {
 			return;
 		}
 		
+		loadBankData();
+		
 		// single value has precedence
 		if (bankCode != null && accountNumber != null) {
 			handleSingle();
@@ -55,10 +69,11 @@ public class Start {
 	
 	private void handleSingle() {
 		try {
-			System.out.println(calculateIban(bankCode, accountNumber));
+			System.out.println("IBAN: " + calculateIban(bankCode, accountNumber));
 		} catch (CheckDigitException e) {
 			System.err.println("error while calculating the IBAN");
 		}
+		System.out.println("BIC:  " + lookupBIC(bankCode));
 	}
 	
 	private void handleFile() {
@@ -77,6 +92,7 @@ public class Start {
 				output.write(header);
 			}
 			output.write("iban");
+			output.write("bic");
 			output.endRecord();
 			
 			line++;
@@ -89,11 +105,15 @@ public class Start {
 				// calculate IBAN
 				String iban = calculateIban(bankFromFile, accountFromFile);
 				
+				// get BIC
+				String bic = lookupBIC(bankFromFile);
+				
 				// write data to output
 				for (String header : headers) {
 					output.write(input.get(header));
 				}
 				output.write(iban);
+				output.write(bic);
 				output.endRecord();
 				
 				line++;
@@ -107,6 +127,51 @@ public class Start {
 		} catch (Exception e) {
 			System.err.println("error in line " + line);
 		}
+	}
+	
+	private void loadBankData() {
+		banks = new HashSet<>();
+		FixedFormatManager manager = new FixedFormatManagerImpl();
+		
+		try {
+			// find latest file in classpath
+			PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+			Resource[] resources = resolver.getResources("classpath*:BLZ_*.txt");
+			Resource latest = null;
+			for (Resource resource : resources) {
+				// TODO what if it is not a file?
+				if (latest == null || latest.getFilename().compareTo(resource.getFilename()) < 0) {
+					latest = resource;
+				}
+			}
+			
+			// read file
+			if (latest != null) {
+				BufferedReader reader =
+					new BufferedReader(new InputStreamReader(latest.getInputStream(), Charset.forName("ISO-8859-15")));
+				String line;
+				while ((line = reader.readLine()) != null) {
+					Bank bank = manager.load(Bank.class, line);
+					if (bank.isFilled()) {
+						banks.add(bank);
+					}
+				}
+				reader.close();
+			}
+		} catch (IOException e) {
+			// TODO
+			e.printStackTrace();
+		}
+	}
+	
+	private String lookupBIC(String oldBankCode) {
+		for (Bank bank : banks) {
+			if (oldBankCode.equals(bank.getBlz())) {
+				return bank.getBic();
+			}
+		}
+		// nothing found
+		return "";
 	}
 	
 	private static String calculateIban(String singleBankCode, String singleAccountNumber) throws CheckDigitException {
