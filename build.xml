@@ -48,7 +48,7 @@
 		<jar basedir="${bin.dir}" destfile="${release.jar}">
 			<manifest>
 				<attribute name="Main-Class" value="org.zephyrsoft.ibancalc.Start" />
-				<attribute name="Class-Path" value="${lib.list}"/>
+				<attribute name="Class-Path" value="${lib.list} ."/>
 				<attribute name="Implementation-Vendor" value="zephyrsoft.org" />
 				<attribute name="Implementation-Title" value="ibancalc" />
 			</manifest>
