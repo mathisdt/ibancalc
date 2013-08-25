@@ -81,7 +81,6 @@ java -jar $$SCRIPTDIR/ibancalc.jar
 		<delete includeemptydirs="true">
 			<fileset dir="${target.dir}" includes="**/*" />
 		</delete>
-		<mkdir dir="${target.dir}/lib" />
 
 		<mkdir dir="${bin.dir}" />
 		<delete includeemptydirs="true">
