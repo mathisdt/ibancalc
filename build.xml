@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+	Creates the project's release bundle.
+-->
+<project default="completeBuild" basedir=".">
+
+	<property name="start.dir" value="${basedir}" />
+	<property name="src.java.dir" value="${start.dir}/src/main/java" />
+	<property name="src.resources.dir" value="${start.dir}/src/main/resources" />
+	<property name="lib.dir" value="${start.dir}/lib" />
+	<property name="target.dir" value="${start.dir}/target" />
+	<property name="bin.dir" value="${target.dir}/bin" />
+	<property name="package.dir" value="${target.dir}/package" />
+	<property name="release.jar" value="${package.dir}/ibancalc.jar" />
+
+	<target name="completeBuild">
+		<!-- make sure that needed directories exist as expected -->
+		<antcall target="prepare" inheritRefs="true" />
+
+		<!-- compile java source files-->
+		<javac destdir="${bin.dir}" source="1.7" target="1.7" debug="true" includeantruntime="false">
+			<classpath >
+				<fileset dir="${lib.dir}">
+					<include name="*.jar" />
+				</fileset>
+			</classpath>
+			<src>
+				<pathelement path="${src.java.dir}" />
+			</src>
+		</javac>
+
+		<!-- copy libraries -->
+		<copy todir="${package.dir}/lib">
+			<fileset dir="${lib.dir}">
+				<include name="*.jar" />
+			</fileset>
+		</copy>
+
+		<!-- build jar file -->
+		<path id="build-classpath">
+		    <fileset dir="${package.dir}/lib">
+		        <include name="*.jar"/>
+		    </fileset>
+		</path>
+		<manifestclasspath property="lib.list" jarfile="${release.jar}">
+		    <classpath refid="build-classpath"/>
+		</manifestclasspath>
+		<jar basedir="${bin.dir}" destfile="${release.jar}">
+			<manifest>
+				<attribute name="Main-Class" value="org.zephyrsoft.ibancalc.Start" />
+				<attribute name="Class-Path" value="${lib.list}"/>
+				<attribute name="Implementation-Vendor" value="zephyrsoft.org" />
+				<attribute name="Implementation-Title" value="ibancalc" />
+			</manifest>
+		</jar>
+
+		<!-- copy resources -->
+		<copy todir="${package.dir}">
+			<fileset dir="${src.resources.dir}">
+				<include name="*.properties" />
+				<include name="*.txt" />
+			</fileset>
+		</copy>
+
+		<!-- create scripts for easy startup -->
+		<echo file="${package.dir}/run-ibancalc.sh" append="false">#!/bin/sh
+SCRIPT=$$(readlink -f $$0)
+SCRIPTDIR=$$(dirname $$SCRIPT)
+java -jar $$SCRIPTDIR/ibancalc.jar
+		</echo>
+		<chmod file="${package.dir}/run-ibancalc.sh" perm="a+rx"/>
+
+		<!-- create package for distribution -->
+		<zip destfile="${target.dir}/ibancalc.zip">
+			<zipfileset dir="${package.dir}" prefix="ibancalc" />
+		</zip>
+	</target>
+
+	<target name="prepare">
+		<mkdir dir="${target.dir}" />
+		<delete includeemptydirs="true">
+			<fileset dir="${target.dir}" includes="**/*" />
+		</delete>
+		<mkdir dir="${target.dir}/lib" />
+
+		<mkdir dir="${bin.dir}" />
+		<delete includeemptydirs="true">
+			<fileset dir="${bin.dir}" includes="**/*" />
+		</delete>
+	</target>
+
+</project>
