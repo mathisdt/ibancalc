@@ -1,5 +1,5 @@
 The supplied BLZ_*.txt files are from the Extranet of the Deutsche Bundesbank:
-http://www.bundesbank.de/Redaktion/DE/Standardartikel/Kerngeschaeftsfelder/Unbarer_Zahlungsverkehr/bankleitzahlen_download.html
+https://www.bundesbank.de/de/aufgaben/unbarer-zahlungsverkehr/serviceangebot/bankleitzahlen/download-bankleitzahlen-602592
 
 You may add a newer file on the classpath (which includes the directory this file
 resides in) and it will be automatically used instead of one of these.
